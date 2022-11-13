@@ -75,7 +75,7 @@ class DeployCommand(Command):
 setup_requires = []
 
 install_requires = [
-    'numpy>=1.19.5',
+    'numpy==1.19.5',
     'tensorflow-gpu==2.4.1',
     'keras==2.4.3',
     'mtcnn',
