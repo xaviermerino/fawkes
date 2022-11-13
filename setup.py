@@ -80,7 +80,8 @@ install_requires = [
     'keras==2.4.3',
     'mtcnn',
     'pillow>=7.0.0',
-    'bleach>=2.1.0'
+    'bleach>=2.1.0',
+    'h5py==2.10.0'
 ]
 
 setup(
