@@ -81,7 +81,7 @@ install_requires = [
     'mtcnn',
     'pillow>=7.0.0',
     'bleach>=2.1.0',
-    'h5py==2.10.0'
+    'h5py~=3.10.0'
 ]
 
 setup(
