@@ -76,12 +76,12 @@ setup_requires = []
 
 install_requires = [
     'numpy==1.19.5',
-    'tensorflow-gpu==2.4.1',
+    'tensorflow-gpu==2.5.3',
     'keras==2.4.3',
     'mtcnn',
     'pillow>=7.0.0',
     'bleach>=2.1.0',
-    'h5py==2.10.0'
+    'h5py~=3.10.0'
 ]
 
 setup(
