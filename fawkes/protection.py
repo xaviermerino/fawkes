@@ -133,7 +133,7 @@ class Fawkes(object):
                 continue
             p_img = final_images[i]
             path = image_paths[i]
-            file_name = "{}_cloaked.{}".format(".".join(path.split(".")[:-1]), format)
+            file_name = "{}_cloaked_{}.{}".format(".".join(path.split(".")[:-1]), self.mode, format)
             dump_image(p_img, file_name, format=format)
 
         print("Done!")
