@@ -9,6 +9,9 @@ import glob
 import logging
 import os
 import sys
+import math
+from tqdm import tqdm
+from pathlib import Path
 
 logging.getLogger('tensorflow').setLevel(logging.ERROR)
 os.environ["KMP_AFFINITY"] = "noverbose"
@@ -80,7 +83,7 @@ class Fawkes(object):
 
     def run_protection(self, image_paths, th=0.04, sd=1e7, lr=10, max_step=500, batch_size=1, format='png',
                        separate_target=True, debug=False, no_align=False, exp="", maximize=True,
-                       save_last_on_failed=True):
+                       save_last_on_failed=True, output_directory='/data'):
 
         current_param = "-".join([str(x) for x in [self.th, sd, self.lr, self.max_step, batch_size, format,
                                                    separate_target, debug]])
@@ -132,12 +135,23 @@ class Fawkes(object):
             if i in images_without_face:
                 continue
             p_img = final_images[i]
-            path = image_paths[i]
-            file_name = "{}_cloaked_{}.{}".format(".".join(path.split(".")[:-1]), self.mode, format)
-            dump_image(p_img, file_name, format=format)
+            path = Path(image_paths[i])
+            file_name = "{}_cloaked_{}.{}".format(path.stem, self.mode, format)
+            cloaked_file_path = str(Path(output_directory) / file_name)
+            # file_name = "{}_cloaked_{}.{}".format(".".join(path.split(".")[:-1]), self.mode, format)
+            dump_image(p_img, cloaked_file_path, format=format)
 
         print("Done!")
         return 1
+
+
+def list_files(path:str, allowed_ext:list) -> list:
+    return [
+        str(os.path.join(dp, f)) 
+        for dp, dn, filenames in os.walk(path) 
+        for f in filenames 
+        if os.path.splitext(f)[1] in allowed_ext
+    ]
 
 
 def main(*argv):
@@ -152,7 +166,9 @@ def main(*argv):
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--directory', '-d', type=str,
-                        help='the directory that contains images to run protection', default='imgs/')
+                        help='the directory that contains images to run protection', default='/data')
+    parser.add_argument('--output', '-o', type=str,
+                        help='the directory to save the cloaked images', default='/output')
     parser.add_argument('--gpu', '-g', type=str,
                         help='the GPU id when using GPU for optimization', default='0')
     parser.add_argument('--mode', '-m', type=str,
@@ -169,7 +185,7 @@ def main(*argv):
     parser.add_argument('--sd', type=int, help='only relevant with mode=custom, penalty number, read more in the paper',
                         default=1e6)
     parser.add_argument('--lr', type=float, help='only relevant with mode=custom, learning rate', default=2)
-    parser.add_argument('--batch-size', help="number of images to run optimization together", type=int, default=1)
+    parser.add_argument('--batch-size', '-b', help="number of images to run optimization together", type=int, default=1)
     parser.add_argument('--separate_target', help="whether select separate targets for each faces in the directory",
                         action='store_true')
     parser.add_argument('--no-align', help="whether to detect and crop faces",
@@ -186,15 +202,23 @@ def main(*argv):
     if args.format == 'jpg':
         args.format = 'jpeg'
 
-    image_paths = glob.glob(os.path.join(args.directory, "*"))
-    image_paths = [path for path in image_paths if "_cloaked" not in path.split("/")[-1]]
+    image_paths = list_files(args.directory, [".png", ".jpg", ".jpeg", ".PNG", ".JPG", ".JPEG"])
+
+    if not image_paths:
+        print("No images provided!")
+        sys.exit(1)
+
+    image_paths = np.array_split(image_paths, math.ceil(len(image_paths) / 1024))
 
     protector = Fawkes(args.feature_extractor, args.gpu, args.batch_size, mode=args.mode)
 
-    protector.run_protection(image_paths, th=args.th, sd=args.sd, lr=args.lr,
-                             max_step=args.max_step,
-                             batch_size=args.batch_size, format=args.format,
-                             separate_target=args.separate_target, debug=args.debug, no_align=args.no_align)
+    print("Processing Images...")
+    for path_chunk in tqdm(image_paths):
+        protector.run_protection(path_chunk, th=args.th, sd=args.sd, lr=args.lr,
+                                max_step=args.max_step,
+                                batch_size=args.batch_size, format=args.format,
+                                separate_target=args.separate_target, 
+                                debug=args.debug, no_align=args.no_align, output_directory=args.output)
 
 
 if __name__ == '__main__':
